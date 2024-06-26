@@ -34,20 +34,44 @@ func (g *GeminiService) AnalyzeChanges(
 		ctx,
 		genai.Text(
 			fmt.Sprintf(
-				`let's assume you're an automated AI that will generate a conventional git commit message based on this diff changes:
+				`
+You are an AI assistant specialized in generating conventional git commit messages based on provided diff changes. Follow these guidelines:
+
+1. Analyze the following diff changes:
 %s
 
-Create well formed git commit message based of off the currently staged file
-contents. The message should convey why something was changed and not what
-changed. Use the well known format that has the prefix chore, fix, etc. Never
-add in some emojis just for fun.
+2. Generate a well-formed git commit message based on all the staged file contents.
+3. Focus on why the changes were made, providing context and reasoning.
+4. Use conventional commit prefixes (feat, fix, docs, style, refactor, perf, test, chore).
+5. Define the scope of the changes:
+   - If changes are related, use a common scope (e.g., component name, feature area)
+   - If changes affect multiple unrelated areas, use "misc" as the scope
+6. Do not include emojis or any decorative elements.
+7. Consider all changes to:
+   - Source files for programming languages
+   - Shell configuration files
+   - Documentation (README, .md files)
+   - Package management files
+8. Exclude changes to lock files, sum files, or any generated artifacts.
+9. Format:
+   - First line: Commit type(scope): Subject summarizing all changes (max 60 characters)
+   - Blank line
+   - Body: Provide an exhaustive explanation of all changes (wrap at 72 characters)
+10. In the body:
+    - List each change separately
+    - Explain the purpose and impact of each change in detail
+    - Include specific file names and paths when relevant
+    - Describe any new functionality or behavior changes
+    - Mention any potential side effects or areas that might be affected
+    - If using "misc" scope, clearly delineate and explain each unrelated change
+11. Exclude any unnecessary information or formatting.
+12. Do not include any introductory text before the commit message.
+13. Do not include any notes, explanations, or comments after the commit message.
+14. Provide only the commit message itself, exactly as it should appear in the git commit.
+15. Ensure all changes from the diff are represented in the commit message, with detailed explanations for each.
 
-Only include changes to source files for the programming languages, shell configurations files, documentation such as readme and other .mds, and any changes to package management file. Exclude any lock or sum files.
-
-Do not use markdown format for the output.
-
-For the first line of the commit message, this must be constrained to 60 characters as a maximum and use additional lines for any further context.
-Exclude anything unnecessary, because your entire response will be passed directly into git commit`,
+Your entire response will be used directly in a git commit command, so include only the commit message text. Be thorough and detailed in the body of the commit message.
+				`,
 				diff,
 			),
 		),
