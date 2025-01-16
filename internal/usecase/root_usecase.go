@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/huh"
@@ -141,19 +143,57 @@ generate:
 		case regenerate:
 			continue
 		case edit:
-			if err := huh.NewForm(
-				huh.NewGroup(
-					huh.NewText().Title("Edit commit message manually").CharLimit(1000).Value(&message),
-				),
-			).Run(); err != nil {
-				return err
-			}
+			for {
+				tmpFile, _ := os.CreateTemp(os.TempDir(), "COMMIT_EDITMSG")
+				_ = os.WriteFile(tmpFile.Name(), []byte(message), 0o644)
 
-			if err := r.gitService.CommitChanges(message); err != nil {
-				return err
+				editor := os.Getenv("EDITOR")
+				cmd := exec.Command(editor, tmpFile.Name())
+				cmd.Stdin = os.Stdin
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+
+				if err := cmd.Run(); err != nil {
+					return err
+				}
+
+				msg, _ := os.ReadFile(tmpFile.Name())
+				message = string(msg)
+				_ = os.Remove(tmpFile.Name())
+
+				var selectedAction action
+				if err := huh.NewForm(
+					huh.NewGroup(
+						huh.NewSelect[action]().
+							Title("Use this commit message?").
+							Options(
+								huh.NewOption("Yes", confirm),
+								huh.NewOption("Edit Again", edit),
+								huh.NewOption("Regenerate", regenerate),
+								huh.NewOption("Cancel", cancel),
+							).
+							Value(&selectedAction),
+					),
+				).Run(); err != nil {
+					return err
+				}
+
+				switch selectedAction {
+				case confirm:
+					if err := r.gitService.CommitChanges(message); err != nil {
+						return err
+					}
+					color.New(color.FgGreen).Println("✔ Successfully committed!")
+					return nil
+				case edit:
+					continue
+				case regenerate:
+					continue generate
+				case cancel:
+					color.New(color.FgRed).Println("Commit cancelled")
+					return nil
+				}
 			}
-			color.New(color.FgGreen).Println("✔ Successfully committed!")
-			break generate
 		case cancel:
 			color.New(color.FgRed).Println("Commit cancelled")
 			break generate

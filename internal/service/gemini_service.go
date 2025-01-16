@@ -29,7 +29,26 @@ func (g *GeminiService) AnalyzeChanges(
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-pro")
+	model := client.GenerativeModel("gemini-2.0-flash-exp")
+	safetySettings := []*genai.SafetySetting{
+		{
+			Category:  genai.HarmCategoryHarassment,
+			Threshold: genai.HarmBlockNone,
+		},
+		{
+			Category:  genai.HarmCategoryHateSpeech,
+			Threshold: genai.HarmBlockNone,
+		},
+		{
+			Category:  genai.HarmCategoryDangerousContent,
+			Threshold: genai.HarmBlockNone,
+		},
+		{
+			Category:  genai.HarmCategorySexuallyExplicit,
+			Threshold: genai.HarmBlockNone,
+		},
+	}
+	model.SafetySettings = safetySettings
 	resp, err := model.GenerateContent(
 		ctx,
 		genai.Text(
@@ -40,35 +59,36 @@ You are an AI assistant specialized in generating conventional git commit messag
 1. Analyze the following diff changes:
 %s
 
-2. Generate a well-formed git commit message based on all the staged file contents.
-3. Focus on why the changes were made, providing context and reasoning.
-4. Use conventional commit prefixes (feat, fix, docs, style, refactor, perf, test, chore).
-5. Define the scope of the changes:
+2. Generate a well-formed git commit message based on all the staged file contents (except the package configuration files (go.mod/package.json/cargo.toml/etc...)).
+3. Be concise and direct
+4. Focus on why the changes were made, providing context and reasoning.
+5. Use conventional commit prefixes (feat, fix, docs, style, refactor, perf, test, chore).
+6. Define the scope of the changes:
    - If changes are related, use a common scope (e.g., component name, feature area)
    - If changes affect multiple unrelated areas, use "misc" as the scope
-6. Do not include emojis or any decorative elements.
-7. Consider all changes to:
+7. Do not include emojis or any decorative elements.
+8. Consider all changes to:
    - Source files for programming languages
    - Shell configuration files
    - Documentation (README, .md files)
    - Package management files
-8. Exclude changes to lock files, sum files, or any generated artifacts.
-9. Format:
+9. Exclude changes to lock files, sum files, or any generated artifacts.
+10. Format:
    - First line: Commit type(scope): Subject summarizing all changes (max 60 characters)
    - Blank line
    - Body: Provide an exhaustive explanation of all changes (wrap at 72 characters)
-10. In the body:
+11. In the body:
     - List each change separately
     - Explain the purpose and impact of each change in detail
     - Include specific file names and paths when relevant
     - Describe any new functionality or behavior changes
     - Mention any potential side effects or areas that might be affected
     - If using "misc" scope, clearly delineate and explain each unrelated change
-11. Exclude any unnecessary information or formatting.
-12. Do not include any introductory text before the commit message.
-13. Do not include any notes, explanations, or comments after the commit message.
-14. Provide only the commit message itself, exactly as it should appear in the git commit.
-15. Ensure all changes from the diff are represented in the commit message, with detailed explanations for each.
+12. Exclude any unnecessary information or formatting.
+13. Do not include any introductory text before the commit message.
+14. Do not include any notes, explanations, or comments after the commit message.
+15. Provide only the commit message itself, exactly as it should appear in the git commit.
+16. Ensure all changes from the diff are represented in the commit message, with detailed explanations for each.
 
 Your entire response will be used directly in a git commit command, so include only the commit message text. Be thorough and detailed in the body of the commit message.
 				`,
