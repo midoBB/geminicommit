@@ -147,11 +147,13 @@ generate:
 			continue
 		case edit:
 			for {
-				tmpFile, _ := os.CreateTemp(os.TempDir(), "COMMIT_EDITMSG")
+				tmpDir := os.TempDir()
+				tmpFile, _ := os.CreateTemp(tmpDir, "COMMIT_EDITMSG")
 				_ = os.WriteFile(tmpFile.Name(), []byte(message), 0o644)
 
 				editor := os.Getenv("EDITOR")
 				cmd := exec.Command(editor, tmpFile.Name())
+				cmd.Dir = tmpDir
 				cmd.Stdin = os.Stdin
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
