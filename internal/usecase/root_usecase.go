@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
 
 	"github.com/tfkhdyt/geminicommit/internal/service"
@@ -71,6 +72,7 @@ func (r *RootUsecase) RootCommand(stageAll *bool) error {
 	}
 
 	underline := color.New(color.Underline)
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#F780E2"))
 	files, diff := <-filesChan, <-diffChan
 
 	if len(files) == 0 {
@@ -91,6 +93,7 @@ generate:
 	for {
 		messageChan := make(chan string, 1)
 		if err := spinner.New().
+			TitleStyle(titleStyle).
 			Title("The AI is analyzing your changes").
 			Action(func() {
 				message, err := r.geminiService.AnalyzeChanges(context.Background(), diff)
@@ -161,6 +164,10 @@ generate:
 				message = string(msg)
 				_ = os.Remove(tmpFile.Name())
 
+				underline.Print("Commit message edited!")
+				fmt.Print("\n\n")
+				color.New(color.Bold).Printf("%s", message)
+				fmt.Print("\n\n")
 				var selectedAction action
 				if err := huh.NewForm(
 					huh.NewGroup(
