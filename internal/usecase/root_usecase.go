@@ -36,7 +36,7 @@ func NewRootUsecase(
 	return &RootUsecase{gitService, geminiService}
 }
 
-func (r *RootUsecase) RootCommand(stageAll *bool) error {
+func (r *RootUsecase) RootCommand(stageAll *bool, promptAddition *string) error {
 	if err := r.gitService.VerifyGitInstallation(); err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ generate:
 			TitleStyle(titleStyle).
 			Title("The AI is analyzing your changes").
 			Action(func() {
-				message, err := r.geminiService.AnalyzeChanges(context.Background(), diff)
+				message, err := r.geminiService.AnalyzeChanges(context.Background(), diff, promptAddition)
 				if err != nil {
 					messageChan <- ""
 					return

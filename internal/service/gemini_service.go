@@ -18,6 +18,7 @@ func NewGeminiService() *GeminiService {
 func (g *GeminiService) AnalyzeChanges(
 	ctx context.Context,
 	diff string,
+	promptAddition *string,
 ) (string, error) {
 	client, err := genai.NewClient(
 		ctx,
@@ -49,6 +50,12 @@ func (g *GeminiService) AnalyzeChanges(
 		},
 	}
 	model.SafetySettings = safetySettings
+	var injection string
+	if promptAddition == nil {
+		injection = ""
+	} else {
+		injection = fmt.Sprintf("with additional focus on %s", *promptAddition)
+	}
 	resp, err := model.GenerateContent(
 		ctx,
 		genai.Text(
@@ -56,7 +63,7 @@ func (g *GeminiService) AnalyzeChanges(
 				`
 You are an AI assistant specialized in generating conventional git commit messages based on provided diff changes. Follow these guidelines:
 
-1. Analyze the following diff changes:
+1. Analyze the following diff changes %s
 %s
 
 2. Generate a well-formed git commit message based on all the staged file contents (except the package configuration files (go.mod/package.json/cargo.toml/etc...)).
@@ -92,6 +99,7 @@ You are an AI assistant specialized in generating conventional git commit messag
 
 Your entire response will be used directly in a git commit command, so include only the commit message text. Be thorough and detailed in the body of the commit message.
 				`,
+				injection,
 				diff,
 			),
 		),

@@ -22,7 +22,7 @@ func NewRootHandler(useCase *usecase.RootUsecase) *RootHandler {
 func (r *RootHandler) RootCommand(
 	stageAll *bool,
 ) func(*cobra.Command, []string) {
-	return func(_ *cobra.Command, _ []string) {
+	return func(_ *cobra.Command, args []string) {
 		if apiKey := viper.GetString("api.key"); apiKey == "" {
 			fmt.Println(
 				"Error: API key is still empty, run this command to set your API key",
@@ -33,7 +33,11 @@ func (r *RootHandler) RootCommand(
 			os.Exit(1)
 		}
 
-		err := r.useCase.RootCommand(stageAll)
+		var promptAddition *string
+		if len(args) > 0 {
+			promptAddition = &args[0]
+		}
+		err := r.useCase.RootCommand(stageAll, promptAddition)
 		cobra.CheckErr(err)
 	}
 }
