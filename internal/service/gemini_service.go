@@ -29,8 +29,11 @@ func (g *GeminiService) AnalyzeChanges(
 		return "", err
 	}
 	defer client.Close()
-
-	model := client.GenerativeModel("gemini-2.0-flash-exp")
+	defaultModel := viper.GetString("model.default")
+	if defaultModel == "" {
+		defaultModel = "gemini-2.0-flash-exp"
+	}
+	model := client.GenerativeModel(defaultModel)
 	safetySettings := []*genai.SafetySetting{
 		{
 			Category:  genai.HarmCategoryHarassment,

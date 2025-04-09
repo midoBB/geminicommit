@@ -12,12 +12,8 @@ var ModelCmd = &cobra.Command{
 	Use:   "model",
 	Short: "Manage Google Gemini model configuration",
 	Long:  `Manage the Google Gemini model used by the application.`,
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Println("model called")
-	// },
 }
 
 func init() {
-	// Add subcommands here, like set
 	ModelCmd.AddCommand(setCmd)
 }

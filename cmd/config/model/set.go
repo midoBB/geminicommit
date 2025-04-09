@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os" // Import os package
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -17,6 +18,17 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
+
+func getModelName(oldName string) string {
+	lastSlashIndex := strings.LastIndex(oldName, "/")
+	// Extract the substring after the last '/'
+	if lastSlashIndex != -1 {
+		modelName := oldName[lastSlashIndex+1:] // +1 to skip the '/'
+		return modelName
+	} else {
+		return oldName
+	}
+}
 
 // setCmd represents the set command for the model
 var setCmd = &cobra.Command{
@@ -32,9 +44,6 @@ var setCmd = &cobra.Command{
 				log.Fatal("Google Gemini API key not found. Please set it using 'geminicommit config key set <your-api-key>' or the GEMINI_API_KEY environment variable.")
 				return
 			}
-			// Optionally save the found env var key to config? For now, just use it.
-			// viper.Set("api.key", apiKey)
-			// viper.WriteConfig()
 		}
 
 		ctx := context.Background()
@@ -48,12 +57,12 @@ var setCmd = &cobra.Command{
 		action := func() {
 			iter := client.ListModels(ctx)
 			for {
-				m, err := iter.Next()
-				if err == iterator.Done {
+				m, iterErr := iter.Next()
+				if iterErr == iterator.Done {
 					break
 				}
-				if err != nil {
-					log.Fatalf("Failed to list models: %v", err)
+				if iterErr != nil {
+					log.Fatalf("Failed to list models: %v", iterErr)
 				}
 				// We only want models that support generateContent
 				supported := false
@@ -106,12 +115,12 @@ var setCmd = &cobra.Command{
 		}
 
 		if selectedModel != "" {
-			viper.Set("model.default", selectedModel)
+			viper.Set("model.default", getModelName(selectedModel))
 			if err := viper.WriteConfig(); err != nil {
 				// Handle case where config file doesn't exist yet
 				if os.IsNotExist(err) {
-					if err := viper.SafeWriteConfig(); err != nil {
-						log.Fatalf("Error creating config file: %v", err)
+					if configErr := viper.SafeWriteConfig(); configErr != nil {
+						log.Fatalf("Error creating config file: %v", configErr)
 					}
 					fmt.Printf("Set default model to: %s (Config file created)", selectedModel)
 				} else {
@@ -127,6 +136,4 @@ var setCmd = &cobra.Command{
 }
 
 func init() {
-	// Add the set command to the model command
-	// This will be done in model.go init()
 }

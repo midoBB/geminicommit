@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package key
 
 import (
-	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -14,9 +13,6 @@ var KeyCmd = &cobra.Command{
 	Use:   "key",
 	Short: "Manage Google Gemini API key",
 	Long:  `Manage Google Gemini API key`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("key called")
-	},
 }
 
 func init() {
