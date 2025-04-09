@@ -20,6 +20,7 @@ type action string
 const (
 	confirm    action = "CONFIRM"
 	regenerate action = "REGENERATE"
+	clue       action = "CLUE"
 	edit       action = "EDIT"
 	cancel     action = "CANCEL"
 )
@@ -127,6 +128,7 @@ generate:
 					Options(
 						huh.NewOption("Yes", confirm),
 						huh.NewOption("Regenerate", regenerate),
+						huh.NewOption("Add Clue", clue),
 						huh.NewOption("Edit", edit),
 						huh.NewOption("Cancel", cancel),
 					).
@@ -145,6 +147,23 @@ generate:
 			break generate
 		case regenerate:
 			continue
+		case clue:
+			var userClue string
+			if err := huh.NewInput().
+				Title("Enter your clue for the AI:").
+				Value(&userClue).
+				Run(); err != nil {
+				return err
+			}
+			if strings.TrimSpace(userClue) != "" {
+				promptAddition = &userClue
+				fmt.Print("\n")
+				color.New(color.Italic).Println("Regenerating with provided clue...")
+				fmt.Print("\n")
+			} else {
+				promptAddition = nil
+			}
+			continue generate
 		case edit:
 			for {
 				tmpDir := os.TempDir()
