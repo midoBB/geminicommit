@@ -40,26 +40,54 @@ func (g *GitService) StageAll() error {
 }
 
 func (g *GitService) DetectDiffChanges() ([]string, string, error) {
-	files, err := exec.Command("git", "diff", "--cached", "--diff-algorithm=minimal", "--name-only").
-		Output()
+	// Default lock files to exclude if none provided
+	excludePatterns := DefaultLockFilePatterns()
+
+	// Build git command with exclusion patterns
+	fileCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--name-only", "--", "."}
+	diffCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--", "."}
+
+	// Add exclusion patterns to commands
+	for _, pattern := range excludePatterns {
+		fileCmd = append(fileCmd, fmt.Sprintf(":(exclude)%s", pattern))
+		diffCmd = append(diffCmd, fmt.Sprintf(":(exclude)%s", pattern))
+	}
+
+	// Execute file list command
+	files, err := exec.Command(fileCmd[0], fileCmd[1:]...).Output()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return nil, "", err
 	}
-	filesStr := strings.TrimSpace(string(files))
 
+	filesStr := strings.TrimSpace(string(files))
 	if filesStr == "" {
-		return nil, "", fmt.Errorf("nothing to be analyze")
+		return nil, "", fmt.Errorf("nothing to be analyzed")
 	}
 
-	diff, err := exec.Command("git", "diff", "--cached", "--diff-algorithm=minimal").
-		Output()
+	// Execute diff content command
+	diff, err := exec.Command(diffCmd[0], diffCmd[1:]...).Output()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return nil, "", err
 	}
 
 	return strings.Split(filesStr, "\n"), string(diff), nil
+}
+
+// DefaultLockFilePatterns returns common lock file patterns to exclude
+func DefaultLockFilePatterns() []string {
+	return []string{
+		"**/package-lock.json",
+		"**/yarn.lock",
+		"**/Gemfile.lock",
+		"**/Cargo.lock",
+		"**/go.sum",
+		"**/composer.lock",
+		"**/poetry.lock",
+		"**/Pipfile.lock",
+		"**/pnpm-lock.yaml",
+	}
 }
 
 func (g *GitService) CommitChanges(message string) error {

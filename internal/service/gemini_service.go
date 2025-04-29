@@ -100,7 +100,7 @@ You are an AI assistant specialized in generating conventional git commit messag
 15. Provide only the commit message itself, exactly as it should appear in the git commit.
 16. Ensure all changes from the diff are represented in the commit message, with detailed explanations for each.
 
-Your entire response will be used directly in a git commit command, so include only the commit message text, no markdown formatting needed. Be thorough and detailed in the body of the commit message.
+Your entire response will be used directly in a git commit command, so include only the commit message text. NEVER USE markdown formatting. Be thorough and detailed in the body of the commit message.
 				`,
 				injection,
 				diff,
