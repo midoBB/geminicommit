@@ -8,6 +8,49 @@ import (
 
 type GitService struct{}
 
+// HasPreCommitHook checks if .git/hooks/pre-commit exists in the current repository.
+func (g *GitService) HasPreCommitHook() (bool, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("not a git repository: %v", err)
+	}
+	repoRoot := strings.TrimSpace(string(output))
+	hookPath := repoRoot + "/.git/hooks/pre-commit"
+	if _, err := exec.Command("test", "-f", hookPath).Output(); err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+// PreCommitHookPath returns the path to the pre-commit hook if it exists, or an empty string otherwise.
+func (g *GitService) PreCommitHookPath() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("not a git repository: %v", err)
+	}
+	repoRoot := strings.TrimSpace(string(output))
+	hookPath := repoRoot + "/.git/hooks/pre-commit"
+	if _, err := exec.Command("test", "-f", hookPath).Output(); err != nil {
+		return "", nil
+	}
+	return hookPath, nil
+}
+
+// IsExecutable checks if the given file is executable
+func (g *GitService) IsExecutable(path string) bool {
+	return exec.Command("test", "-x", path).Run() == nil
+}
+
+// RunPreCommitHook executes the pre-commit hook and returns any error
+func (g *GitService) RunPreCommitHook(path string) error {
+	cmd := exec.Command(path)
+	cmd.Stdout = nil // inherit
+	cmd.Stderr = nil // inherit
+	return cmd.Run()
+}
+
 func NewGitService() *GitService {
 	return &GitService{}
 }

@@ -46,6 +46,19 @@ func (r *RootUsecase) RootCommand(stageAll *bool, promptAddition *string) error 
 		return err
 	}
 
+	hasHook, _ := r.gitService.HasPreCommitHook()
+	if hasHook {
+		hookPath, _ := r.gitService.PreCommitHookPath()
+		if r.gitService.IsExecutable(hookPath) {
+			color.New(color.FgGreen).Println("✔ Running pre-commit hook...")
+			err := r.gitService.RunPreCommitHook(hookPath)
+			if err != nil {
+				color.New(color.FgRed).Printf("Pre-commit hook failed: %v\n", err)
+				return err
+			}
+			color.New(color.FgGreen).Println("✔ Pre-commit hook ran successfully.")
+		}
+	}
 	if *stageAll {
 		if err := r.gitService.StageAll(); err != nil {
 			return err
