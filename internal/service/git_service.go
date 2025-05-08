@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -43,11 +44,11 @@ func (g *GitService) IsExecutable(path string) bool {
 	return exec.Command("test", "-x", path).Run() == nil
 }
 
-// RunPreCommitHook executes the pre-commit hook and returns any error
+// RunPreCommitHook executes the pre-commit hook and streams all output to the terminal
 func (g *GitService) RunPreCommitHook(path string) error {
 	cmd := exec.Command(path)
-	cmd.Stdout = nil // inherit
-	cmd.Stderr = nil // inherit
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
