@@ -83,40 +83,65 @@ func (g *GitService) StageAll() error {
 	return nil
 }
 
-func (g *GitService) DetectDiffChanges() ([]string, string, error) {
+func (g *GitService) DetectDiffChanges() ([]string, []string, string, error) {
 	// Default lock files to exclude if none provided
 	excludePatterns := DefaultLockFilePatterns()
 
-	// Build git command with exclusion patterns
-	fileCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--name-only", "--", "."}
-	diffCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--", "."}
+	// Build git command with exclusion patterns for modified/added files
+	fileCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--name-only", "--diff-filter=AM", "--", "."}
+	diffCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--diff-filter=AM", "--", "."}
+	
+	// Build git command for deleted files
+	deletedCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--name-only", "--diff-filter=D", "--", "."}
 
 	// Add exclusion patterns to commands
 	for _, pattern := range excludePatterns {
 		fileCmd = append(fileCmd, fmt.Sprintf(":(exclude)%s", pattern))
 		diffCmd = append(diffCmd, fmt.Sprintf(":(exclude)%s", pattern))
+		deletedCmd = append(deletedCmd, fmt.Sprintf(":(exclude)%s", pattern))
 	}
 
-	// Execute file list command
+	// Execute file list command for modified/added files
 	files, err := exec.Command(fileCmd[0], fileCmd[1:]...).Output()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return nil, "", err
+		return nil, nil, "", err
+	}
+
+	// Execute deleted files command
+	deletedFiles, err := exec.Command(deletedCmd[0], deletedCmd[1:]...).Output()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return nil, nil, "", err
 	}
 
 	filesStr := strings.TrimSpace(string(files))
-	if filesStr == "" {
-		return nil, "", fmt.Errorf("nothing to be analyzed")
+	deletedFilesStr := strings.TrimSpace(string(deletedFiles))
+
+	// Check if we have any changes at all
+	if filesStr == "" && deletedFilesStr == "" {
+		return nil, nil, "", fmt.Errorf("nothing to be analyzed")
 	}
 
-	// Execute diff content command
+	// Execute diff content command for modified/added files only
 	diff, err := exec.Command(diffCmd[0], diffCmd[1:]...).Output()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
-	return strings.Split(filesStr, "\n"), string(diff), nil
+	var filesList []string
+	var deletedFilesList []string
+
+	if filesStr != "" {
+		filesList = strings.Split(filesStr, "\n")
+	}
+
+	if deletedFilesStr != "" {
+		deletedFilesList = strings.Split(deletedFilesStr, "\n")
+	}
+
+	return filesList, deletedFilesList, string(diff), nil
 }
 
 // DefaultLockFilePatterns returns common lock file patterns to exclude

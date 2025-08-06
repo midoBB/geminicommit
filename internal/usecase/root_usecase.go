@@ -66,19 +66,22 @@ func (r *RootUsecase) RootCommand(stageAll *bool, promptAddition *string) error 
 	}
 
 	filesChan := make(chan []string, 1)
+	deletedFilesChan := make(chan []string, 1)
 	diffChan := make(chan string, 1)
 
 	if err := spinner.New().
 		Title("Detecting staged files").
 		Action(func() {
-			files, diff, err := r.gitService.DetectDiffChanges()
+			files, deletedFiles, diff, err := r.gitService.DetectDiffChanges()
 			if err != nil {
 				filesChan <- []string{}
+				deletedFilesChan <- []string{}
 				diffChan <- ""
 				return
 			}
 
 			filesChan <- files
+			deletedFilesChan <- deletedFiles
 			diffChan <- diff
 		}).
 		Run(); err != nil {
@@ -87,20 +90,30 @@ func (r *RootUsecase) RootCommand(stageAll *bool, promptAddition *string) error 
 
 	underline := color.New(color.Underline)
 	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#F780E2"))
-	files, diff := <-filesChan, <-diffChan
+	files, deletedFiles, diff := <-filesChan, <-deletedFilesChan, <-diffChan
 
-	if len(files) == 0 {
+	totalFiles := len(files) + len(deletedFiles)
+	if totalFiles == 0 {
 		return fmt.Errorf(
 			"no staged changes found. stage your changes manually, or automatically stage all changes with the `--all` flag",
 		)
-	} else if len(files) == 1 {
-		underline.Printf("Detected %d staged file:\n", len(files))
-	} else {
-		underline.Printf("Detected %d staged files:\n", len(files))
 	}
 
-	for idx, file := range files {
-		color.New(color.Bold).Printf("     %d. %s\n", idx+1, file)
+	if totalFiles == 1 {
+		underline.Printf("Detected %d staged file:\n", totalFiles)
+	} else {
+		underline.Printf("Detected %d staged files:\n", totalFiles)
+	}
+
+	idx := 1
+	for _, file := range files {
+		color.New(color.Bold).Printf("     %d. %s\n", idx, file)
+		idx++
+	}
+
+	for _, file := range deletedFiles {
+		color.New(color.Bold, color.FgRed).Printf("     %d. %s (deleted)\n", idx, file)
+		idx++
 	}
 
 generate:
@@ -110,7 +123,7 @@ generate:
 			TitleStyle(titleStyle).
 			Title("The AI is analyzing your changes").
 			Action(func() {
-				message, err := r.geminiService.AnalyzeChanges(context.Background(), diff, promptAddition)
+				message, err := r.geminiService.AnalyzeChanges(context.Background(), diff, deletedFiles, promptAddition)
 				if err != nil {
 					messageChan <- ""
 					return
@@ -211,6 +224,7 @@ generate:
 								huh.NewOption("Yes", confirm),
 								huh.NewOption("Edit Again", edit),
 								huh.NewOption("Regenerate", regenerate),
+								huh.NewOption("Add Clue", clue),
 								huh.NewOption("Cancel", cancel),
 							).
 							Value(&selectedAction),
@@ -229,6 +243,23 @@ generate:
 				case edit:
 					continue
 				case regenerate:
+					continue generate
+				case clue:
+					var userClue string
+					if err := huh.NewInput().
+						Title("Enter your clue for the AI:").
+						Value(&userClue).
+						Run(); err != nil {
+						return err
+					}
+					if strings.TrimSpace(userClue) != "" {
+						promptAddition = &userClue
+						fmt.Print("\n")
+						color.New(color.Italic).Println("Regenerating with provided clue...")
+						fmt.Print("\n")
+					} else {
+						promptAddition = nil
+					}
 					continue generate
 				case cancel:
 					color.New(color.FgRed).Println("Commit cancelled")

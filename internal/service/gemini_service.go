@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/spf13/viper"
@@ -18,6 +19,7 @@ func NewGeminiService() *GeminiService {
 func (g *GeminiService) AnalyzeChanges(
 	ctx context.Context,
 	diff string,
+	deletedFiles []string,
 	promptAddition *string,
 ) (string, error) {
 	client, err := genai.NewClient(
@@ -59,6 +61,14 @@ func (g *GeminiService) AnalyzeChanges(
 	} else {
 		injection = fmt.Sprintf("with additional focus on %s", *promptAddition)
 	}
+
+	var deletedFilesInfo string
+	if len(deletedFiles) > 0 {
+		deletedFilesInfo = fmt.Sprintf("\n\nDeleted files:\n%s", strings.Join(deletedFiles, "\n"))
+	} else {
+		deletedFilesInfo = ""
+	}
+
 	resp, err := model.GenerateContent(
 		ctx,
 		genai.Text(
@@ -67,7 +77,7 @@ func (g *GeminiService) AnalyzeChanges(
 You are an AI assistant specialized in generating conventional git commit messages based on provided diff changes. Follow these guidelines:
 
 1. Analyze the following diff changes %s
-%s
+%s%s
 
 2. Generate a well-formed git commit message based on all the staged file contents (except the package configuration files (go.mod/package.json/cargo.toml/etc...)).
 3. Be concise and direct
@@ -82,6 +92,7 @@ You are an AI assistant specialized in generating conventional git commit messag
    - Shell configuration files
    - Documentation (README, .md files)
    - Package management files
+   - Deleted files (if any are listed separately)
 9. Exclude changes to lock files, sum files, or any generated artifacts.
 10. Format:
    - First line: Commit type(scope): Subject summarizing all changes (max 60 characters)
@@ -104,6 +115,7 @@ Your entire response will be used directly in a git commit command, so include o
 				`,
 				injection,
 				diff,
+				deletedFilesInfo,
 			),
 		),
 	)
