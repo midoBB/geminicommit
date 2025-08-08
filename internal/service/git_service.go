@@ -90,7 +90,7 @@ func (g *GitService) DetectDiffChanges() ([]string, []string, string, error) {
 	// Build git command with exclusion patterns for modified/added files
 	fileCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--name-only", "--diff-filter=AM", "--", "."}
 	diffCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--diff-filter=AM", "--", "."}
-	
+
 	// Build git command for deleted files
 	deletedCmd := []string{"git", "diff", "--cached", "--diff-algorithm=minimal", "--name-only", "--diff-filter=D", "--", "."}
 
