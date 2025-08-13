@@ -121,7 +121,18 @@ Your entire response will be used directly in a git commit command, so include o
 	)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return "", nil
+		return "", err
+	}
+	if len(resp.Candidates) == 0 {
+		return "", fmt.Errorf(
+			"failed to generate commit message: AI service returned no response candidates (possibly due to content filtering or safety restrictions)",
+		)
+	}
+
+	if len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf(
+			"failed to generate commit message: AI service returned empty response content (the diff may be too large or contain unsupported content)",
+		)
 	}
 
 	return fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0]), nil
